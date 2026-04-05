@@ -1,0 +1,22 @@
+[
+  {
+    "question": "What is Retrieval-Augmented Generation (RAG)?",
+    "ground_truth": "RAG (Retrieval-Augmented Generation) is a technique that combines a retrieval system with a language model. It first retrieves relevant documents from a knowledge base, then uses those documents as context for the LLM to generate grounded, accurate answers."
+  },
+  {
+    "question": "How does chunking affect RAG quality?",
+    "ground_truth": "Chunking is critical for RAG quality — 80% of RAG failures trace to ingestion and chunking problems. Chunk size (512 tokens with ~10% overlap) controls the granularity of retrieved context. Too large and the LLM loses focus; too small and context is fragmented."
+  },
+  {
+    "question": "What is hybrid search in RAG?",
+    "ground_truth": "Hybrid search combines dense vector search (semantic similarity via embeddings) with sparse BM25 keyword search. The results are fused using Reciprocal Rank Fusion (RRF), achieving ~91% recall@10 versus ~78% for dense-only search."
+  },
+  {
+    "question": "What are the key RAGAS evaluation metrics?",
+    "ground_truth": "RAGAS evaluates RAG pipelines using: faithfulness (are LLM claims grounded in retrieved context, target >=0.9), answer_relevancy (is the answer relevant to the question), and context_precision (are retrieved documents useful for the question, target >=0.75)."
+  },
+  {
+    "question": "Explain the difference between LCEL and LangChain legacy chains.",
+    "ground_truth": "LCEL (LangChain Expression Language) is the modern approach using composable Runnables connected with the pipe operator. Legacy chains like RetrievalQA are deprecated. LCEL provides better composability, streaming support, and async-first design."
+  }
+]

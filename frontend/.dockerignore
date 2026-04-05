@@ -1,0 +1,11 @@
+# Frontend .dockerignore
+node_modules
+dist
+.env
+.env.local
+*.log
+.git
+.gitignore
+Dockerfile
+.dockerignore
+nginx.conf

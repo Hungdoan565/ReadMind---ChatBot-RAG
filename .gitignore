@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Env files (NEVER commit these)
+.env
+*.env
+
+# Data & Vector DB
+data/
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage
