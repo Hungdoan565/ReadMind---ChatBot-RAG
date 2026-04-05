@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="readmind-gradient" x1="12" y1="8" x2="52" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C153F4"/>
+      <stop offset="100%" stop-color="#55C8F7"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 8H38L50 20V56H16V8Z" stroke="url(#readmind-gradient)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M38 8V20H50" stroke="url(#readmind-gradient)" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M24 34H42" stroke="url(#readmind-gradient)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M24 42H40" stroke="url(#readmind-gradient)" stroke-width="4" stroke-linecap="round"/>
+</svg>
