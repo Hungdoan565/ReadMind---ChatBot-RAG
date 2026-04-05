@@ -2,9 +2,9 @@
 
 <img src="assets/logo.svg" alt="ReadMind Logo" width="100" />
 
-# 📚 ReadMind
+# ReadMind
 
-# 📚 ReadMind
+
 
 **Production-ready RAG Chatbot** with anonymous room-based document isolation
 
