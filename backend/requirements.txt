@@ -5,8 +5,8 @@ python-multipart==0.0.20
 
 # LangChain (pinned — DO NOT upgrade without testing)
 langchain==0.3.14
-langchain-groq>=1.1.2
-langchain-huggingface>=1.2.1
+langchain-groq==0.2.1
+langchain-huggingface==0.1.2
 langchain-openai==0.2.14
 langchain-community==0.3.14
 langchain-chroma==0.2.2
