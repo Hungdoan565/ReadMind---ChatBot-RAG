@@ -41,7 +41,11 @@ class Settings(BaseSettings):
     NOTION_TOKEN: str = ""
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://chatbot-rag.up.railway.app",
+    ]
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
