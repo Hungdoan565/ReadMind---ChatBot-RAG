@@ -1,4 +1,3 @@
-# Frontend .dockerignore
 node_modules
 dist
 .env
@@ -8,4 +7,3 @@ dist
 .gitignore
 Dockerfile
 .dockerignore
-nginx.conf
