@@ -172,6 +172,7 @@ async def _fetch_with_jina(
             "title": title,
             "type": "web_page",
             "doc_id": doc_id or _url_to_id(url),
+            "room_code": room_code or "",
         },
     )
 
@@ -184,15 +185,17 @@ async def _fetch_with_jina(
 async def fetch_urls(
     urls: List[str],
     doc_id: Optional[str] = None,
+    room_code: Optional[str] = None,
 ) -> List[Document]:
     """
     Fetch multiple URLs sequentially.
     Skips URLs that fail — logs a warning for each.
+    room_code is passed to each fetched document.
     """
     all_docs: List[Document] = []
     for url in urls:
         try:
-            docs = await fetch_url(url, doc_id=doc_id)
+            docs = await fetch_url(url, doc_id=doc_id, room_code=room_code)
             all_docs.extend(docs)
         except Exception as e:
             logger.warning(f"Skipped URL {url}: {e}")

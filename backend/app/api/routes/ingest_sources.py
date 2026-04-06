@@ -38,6 +38,7 @@ async def ingest_notion_page(request: NotionIngestRequest):
     """
     Ingest a single Notion page by ID or URL.
     Requires NOTION_TOKEN in .env or passed in the request body.
+    room_code is required for document scoping.
     """
     token = request.token or settings.NOTION_TOKEN
     if not token:
@@ -48,7 +49,7 @@ async def ingest_notion_page(request: NotionIngestRequest):
 
     doc_id = str(uuid.uuid4())
     try:
-        raw_docs = fetch_notion_page(request.page_id, token=token, doc_id=doc_id)
+        raw_docs = fetch_notion_page(request.page_id, token=token, doc_id=doc_id, room_code=request.room_code)
         if not raw_docs:
             raise HTTPException(
                 status_code=422,
@@ -79,6 +80,7 @@ async def ingest_notion_database(request: NotionDatabaseIngestRequest):
     """
     Ingest all pages from a Notion database.
     Processes up to `max_pages` pages (default 50).
+    room_code is required for document scoping.
     """
     token = request.token or settings.NOTION_TOKEN
     if not token:
@@ -94,6 +96,7 @@ async def ingest_notion_database(request: NotionDatabaseIngestRequest):
             token=token,
             doc_id=doc_id,
             max_pages=request.max_pages,
+            room_code=request.room_code,
         )
         if not raw_docs:
             raise HTTPException(
@@ -131,10 +134,11 @@ async def ingest_url(request: UrlIngestRequest):
     """
     Fetch and ingest a single web page URL.
     Strips navigation/header/footer noise. Extracts main content.
+    room_code is required for document scoping.
     """
     doc_id = str(uuid.uuid4())
     try:
-        raw_docs = await fetch_url(request.url, doc_id=doc_id)
+        raw_docs = await fetch_url(request.url, doc_id=doc_id, room_code=request.room_code)
         if not raw_docs:
             raise HTTPException(
                 status_code=422,
@@ -167,6 +171,7 @@ async def ingest_urls(request: UrlBatchIngestRequest):
     Fetch and ingest multiple web page URLs in one call.
     URLs that fail are skipped (warnings logged).
     Returns aggregate chunk count.
+    room_code is required for document scoping.
     """
     if not request.urls:
         raise HTTPException(status_code=400, detail="No URLs provided")
@@ -175,7 +180,7 @@ async def ingest_urls(request: UrlBatchIngestRequest):
 
     doc_id = str(uuid.uuid4())
     try:
-        raw_docs = await fetch_urls(request.urls, doc_id=doc_id)
+        raw_docs = await fetch_urls(request.urls, doc_id=doc_id, room_code=request.room_code)
         if not raw_docs:
             raise HTTPException(
                 status_code=422,

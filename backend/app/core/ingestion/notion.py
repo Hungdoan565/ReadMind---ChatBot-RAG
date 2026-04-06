@@ -102,12 +102,14 @@ def fetch_notion_page(
     page_id_or_url: str,
     token: str,
     doc_id: Optional[str] = None,
+    room_code: Optional[str] = None,
 ) -> List[Document]:
     """
     Fetch a Notion page and all its child blocks.
 
     Returns a list of Documents — one per logical section (heading + content),
     or a single Document if no headings.
+    room_code is included in metadata for room-scoped access.
     """
     try:
         from notion_client import Client
@@ -156,6 +158,7 @@ def fetch_notion_page(
                     "type": "notion_page",
                     "doc_id": doc_id or page_id,
                     "chunk_index": i,
+                    "room_code": room_code or "",
                 },
             )
         )
@@ -169,11 +172,13 @@ def fetch_notion_database(
     token: str,
     doc_id: Optional[str] = None,
     max_pages: int = 50,
+    room_code: Optional[str] = None,
 ) -> List[Document]:
     """
     Fetch all pages in a Notion database and return as Documents.
 
     Each database row becomes its own set of Documents.
+    room_code is included in metadata for room-scoped access.
     """
     try:
         from notion_client import Client
@@ -205,7 +210,7 @@ def fetch_notion_database(
     all_documents = []
     for page in results:
         try:
-            page_docs = fetch_notion_page(page["id"], token=token, doc_id=doc_id)
+            page_docs = fetch_notion_page(page["id"], token=token, doc_id=doc_id, room_code=room_code)
             all_documents.extend(page_docs)
         except Exception as e:
             logger.warning(f"Skipped Notion page {page.get('id')}: {e}")
