@@ -29,7 +29,11 @@ FROM python:3.12-slim AS runtime
 WORKDIR /app
 
 # Non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+RUN groupadd -r appuser && useradd -r -g appuser -d /home/appuser -m appuser
+
+# HuggingFace cache directory (for sentence-transformers model)
+ENV HF_HOME=/home/appuser/.cache/huggingface
+RUN mkdir -p $HF_HOME && chown -R appuser:appuser /home/appuser
 
 # Copy only the venv from builder
 COPY --from=builder /opt/venv /opt/venv
