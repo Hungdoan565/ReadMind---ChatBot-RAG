@@ -150,7 +150,18 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages(
 # concatenated onto the raw system-prompt strings before the ChatPromptTemplate
 # (f-string format) is built, leaving `{context}` as the only placeholder.
 RICH_FORMAT_GUIDE = (
-    "\n\nĐỊNH DẠNG TRÌNH BÀY — chọn định dạng phù hợp nhất với nội dung:\n"
+    "\n\nKHẢ NĂNG TRÌNH BÀY TRỰC QUAN (RẤT QUAN TRỌNG):\n"
+    "- Bạn CÓ khả năng tạo sơ đồ. Cách làm: viết mã Mermaid trong khối "
+    "```mermaid; giao diện sẽ tự động hiển thị thành hình ảnh sơ đồ cho người "
+    "dùng. Vì vậy TUYỆT ĐỐI KHÔNG nói những câu như 'tôi chỉ là trợ lý văn "
+    "bản', 'tôi không thể vẽ', 'tôi không tạo được hình ảnh'. Hãy xuất mã "
+    "Mermaid trực tiếp.\n"
+    "- Khi người dùng yêu cầu 'vẽ sơ đồ', 'sơ đồ hóa', 'trực quan', 'flowchart', "
+    "'lưu đồ', 'mind map'... LUÔN trả lời bằng một khối ```mermaid hợp lệ.\n"
+    "- CHỦ ĐỘNG trình bày trực quan: kể cả khi người dùng KHÔNG yêu cầu, nếu nội "
+    "dung phù hợp (quy trình, so sánh, phân cấp) thì tự chọn sơ đồ/bảng/cây để "
+    "người dùng dễ nắm bắt, kèm phần giải thích ngắn gọn.\n"
+    "\nĐỊNH DẠNG TRÌNH BÀY — chọn định dạng phù hợp nhất với nội dung:\n"
     "- Quy trình, luồng xử lý, máy trạng thái, hoặc cây quyết định/phân nhánh có "
     "TỪ 3 BƯỚC trở lên HOẶC TỪ 2 NHÁNH trở lên: vẽ sơ đồ Mermaid.\n"
     "- So sánh TỪ 2 ĐỐI TƯỢNG trở lên theo TỪ 2 TIÊU CHÍ trở lên: dùng bảng "
