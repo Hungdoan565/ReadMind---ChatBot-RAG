@@ -1,31 +1,58 @@
 """
 Ingest endpoint: upload documents → parse → chunk → embed → store.
-Supports: PDF, DOCX, TXT
+Supports: PDF, DOCX, TXT, XLSX, CSV
 """
 
 import uuid
 import logging
-from fastapi import APIRouter, UploadFile, File, Form, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Query, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from langchain_core.documents import Document
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from app.models.schemas import IngestResponse
+from app.core.ingestion.csv_parser import parse_csv_bytes
 from app.core.ingestion.pdf import parse_pdf_bytes
+from app.core.ingestion.excel import parse_excel_bytes
 from app.core.ingestion.docx_parser import parse_docx_bytes
+from app.core.ingestion.ocr import is_scanned_pdf, ocr_pdf_bytes
 from app.core.ingestion.chunker import chunk_documents
 from app.core.vectordb.store import add_documents, delete_by_doc_id, list_documents
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt", ".xlsx", ".csv"}
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 
 
+def get_rate_limit_key(request: Request) -> str:
+    """
+    Rate limit by user_id when authenticated, by IP when anonymous.
+
+    Authenticated users get higher limits (20/minute ingest).
+    Anonymous users keep current limits (10/minute).
+    """
+    user = getattr(request.state, "current_user", None)
+    if user is not None:
+        return f"user:{user.id}"
+    return get_remote_address(request)
+
+
+_ANON_LIMIT = settings.RATE_LIMIT_INGEST  # "10/minute"
+
+
 @router.post("/ingest", response_model=IngestResponse)
-async def ingest_document(file: UploadFile = File(...), room_code: str = Form(...)):
+@limiter.limit(_ANON_LIMIT)
+async def ingest_document(
+    request: Request, file: UploadFile = File(...), room_code: str = Form(...)
+):
     """
     Upload and process a document into the vector store.
-    Pipeline: upload → parse → chunk → embed → ChromaDB
+    Pipeline: upload → parse → chunk → embed → pgvector (or ChromaDB)
     """
     if not room_code or not room_code.strip():
         raise HTTPException(status_code=400, detail="room_code is required")
@@ -57,8 +84,20 @@ async def ingest_document(file: UploadFile = File(...), room_code: str = Form(..
         # 1. Parse
         if suffix == ".pdf":
             raw_docs = parse_pdf_bytes(content, file.filename, doc_id, room_code)
+            should_try_ocr = settings.OCR_ENABLED and (
+                not raw_docs or is_scanned_pdf(content)
+            )
+            if should_try_ocr:
+                logger.info(
+                    "Detected scanned PDF for %s — attempting OCR", file.filename
+                )
+                raw_docs = ocr_pdf_bytes(content, file.filename, doc_id, room_code)
         elif suffix == ".docx":
             raw_docs = parse_docx_bytes(content, file.filename, doc_id, room_code)
+        elif suffix == ".xlsx":
+            raw_docs = parse_excel_bytes(content, file.filename, doc_id, room_code)
+        elif suffix == ".csv":
+            raw_docs = parse_csv_bytes(content, file.filename, doc_id, room_code)
         else:  # .txt
             text = content.decode("utf-8", errors="ignore")
             raw_docs = [
@@ -76,7 +115,7 @@ async def ingest_document(file: UploadFile = File(...), room_code: str = Form(..
         if not raw_docs:
             raise HTTPException(
                 status_code=422,
-                detail="Could not extract text from file. Ensure it is not a scanned image-only PDF.",
+                detail="Could not extract text from file. If this is a scanned PDF, ensure OCR dependencies are installed and OCR is enabled.",
             )
 
         # 2. Chunk
@@ -135,7 +174,9 @@ async def get_documents(room_code: str = Query(...)):
     if not room_code or not room_code.strip():
         raise HTTPException(status_code=400, detail="room_code is required")
     try:
-        docs = list_documents(room_code)
+        # list_documents does a blocking SQL query — offload to a worker thread
+        # so it never stalls the event loop (which previously caused 502s).
+        docs = await run_in_threadpool(list_documents, room_code)
         return {
             "documents": docs,
             "total": len(docs),

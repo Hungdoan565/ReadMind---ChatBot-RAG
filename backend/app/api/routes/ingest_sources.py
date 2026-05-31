@@ -9,7 +9,10 @@ Additional ingest endpoints for external sources:
 import logging
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from app.config import settings
 from app.models.schemas import (
@@ -26,6 +29,7 @@ from app.core.vectordb.store import add_documents
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +134,8 @@ async def ingest_notion_database(request: NotionDatabaseIngestRequest):
 
 
 @router.post("/ingest/url", response_model=IngestResponse)
-async def ingest_url(request: UrlIngestRequest):
+@limiter.limit(settings.RATE_LIMIT_INGEST)
+async def ingest_url(request: Request, body: UrlIngestRequest):
     """
     Fetch and ingest a single web page URL.
     Strips navigation/header/footer noise. Extracts main content.
@@ -138,7 +143,7 @@ async def ingest_url(request: UrlIngestRequest):
     """
     doc_id = str(uuid.uuid4())
     try:
-        raw_docs = await fetch_url(request.url, doc_id=doc_id, room_code=request.room_code)
+        raw_docs = await fetch_url(body.url, doc_id=doc_id, room_code=body.room_code)
         if not raw_docs:
             raise HTTPException(
                 status_code=422,
@@ -150,7 +155,7 @@ async def ingest_url(request: UrlIngestRequest):
 
         return IngestResponse(
             doc_id=doc_id,
-            source=request.url,
+            source=body.url,
             chunk_count=stored,
             status="success",
             message=f"Ingested URL into {stored} chunks",
@@ -161,26 +166,27 @@ async def ingest_url(request: UrlIngestRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.exception(f"URL ingest failed for {request.url}")
+        logger.exception(f"URL ingest failed for {body.url}")
         raise HTTPException(status_code=500, detail=f"URL ingest failed: {str(e)}")
 
 
 @router.post("/ingest/urls", response_model=IngestResponse)
-async def ingest_urls(request: UrlBatchIngestRequest):
+@limiter.limit(settings.RATE_LIMIT_INGEST)
+async def ingest_urls(request: Request, body: UrlBatchIngestRequest):
     """
     Fetch and ingest multiple web page URLs in one call.
     URLs that fail are skipped (warnings logged).
     Returns aggregate chunk count.
     room_code is required for document scoping.
     """
-    if not request.urls:
+    if not body.urls:
         raise HTTPException(status_code=400, detail="No URLs provided")
-    if len(request.urls) > 20:
+    if len(body.urls) > 20:
         raise HTTPException(status_code=400, detail="Max 20 URLs per batch")
 
     doc_id = str(uuid.uuid4())
     try:
-        raw_docs = await fetch_urls(request.urls, doc_id=doc_id, room_code=request.room_code)
+        raw_docs = await fetch_urls(body.urls, doc_id=doc_id, room_code=body.room_code)
         if not raw_docs:
             raise HTTPException(
                 status_code=422,
@@ -192,10 +198,10 @@ async def ingest_urls(request: UrlBatchIngestRequest):
 
         return IngestResponse(
             doc_id=doc_id,
-            source=f"batch:{len(request.urls)} URLs",
+            source=f"batch:{len(body.urls)} URLs",
             chunk_count=stored,
             status="success",
-            message=f"Ingested {len(raw_docs)} pages from {len(request.urls)} URLs into {stored} chunks",
+            message=f"Ingested {len(raw_docs)} pages from {len(body.urls)} URLs into {stored} chunks",
         )
 
     except HTTPException:
