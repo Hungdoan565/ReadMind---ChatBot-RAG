@@ -3,11 +3,13 @@ version: "3.9"
 # RAG Chatbot — Docker Compose
 #
 # Services:
-#   backend  — FastAPI + LangChain + ChromaDB (port 8000)
+#   postgres — PostgreSQL + pgvector (port 5432)
+#   redis    — Redis cache + rate limiting (port 6379)
+#   backend  — FastAPI + LangChain (port 8000)
 #   frontend — React via nginx (port 3000)
 #
 # Usage:
-#   cp backend/.env.example backend/.env   # fill in OPENAI_API_KEY
+#   cp backend/.env.example backend/.env   # fill in GROQ_API_KEY
 #   docker compose up --build
 #
 # Access:
@@ -16,6 +18,44 @@ version: "3.9"
 #   Health   : http://localhost:8000/api/health
 
 services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL + pgvector
+  # --------------------------------------------------------------------------
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: readmind
+      POSTGRES_PASSWORD: readmind_dev
+      POSTGRES_DB: readmind
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U readmind"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --------------------------------------------------------------------------
+  # Redis — session cache + rate limiting
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: rag-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # --------------------------------------------------------------------------
   # Backend — FastAPI
   # --------------------------------------------------------------------------
@@ -34,9 +74,20 @@ services:
       - CHROMA_PERSIST_DIR=/data/chroma
       # CORS — allow frontend service
       - CORS_ORIGINS=["http://localhost:3000","http://frontend:80"]
+      # PostgreSQL
+      - DATABASE_URL=postgresql+asyncpg://readmind:readmind_dev@postgres:5432/readmind
+      - DATABASE_URL_SYNC=postgresql+psycopg://readmind:readmind_dev@postgres:5432/readmind
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_RATE_LIMIT_URL=redis://redis:6379/1
     volumes:
       # Persist ChromaDB data across restarts
       - chroma_data:/data/chroma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
@@ -72,4 +123,8 @@ services:
 # --------------------------------------------------------------------------
 volumes:
   chroma_data:
+    driver: local
+  pgdata:
+    driver: local
+  redisdata:
     driver: local

@@ -28,6 +28,13 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+# OCR + PDF rendering runtime packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    tesseract-ocr-vie \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
 # Non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser -d /home/appuser -m appuser
 
