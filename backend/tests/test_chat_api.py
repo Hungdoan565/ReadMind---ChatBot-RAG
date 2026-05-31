@@ -428,7 +428,38 @@ def test_chat_routing_empty_room_uses_direct_no_sources(mock_list, mock_direct):
     assert end_event["sources"] == []
 
 
-def test_chat_missing_room_code_returns_400():
+@patch("app.api.routes.chat.get_direct_chain")
+@patch("app.api.routes.chat.retrieve_docs")
+@patch("app.api.routes.chat.list_documents")
+def test_chat_routing_explicit_no_docs_uses_direct(
+    mock_list, mock_retrieve, mock_direct
+):
+    """Room HAS documents but client selects zero (active_doc_ids=[]) → direct
+    chain, no retrieval, empty sources.
+
+    This guards the "bỏ chọn hết = trả lời như AI thường" behavior: deselecting
+    every document must NOT fall back to reading all documents in the room.
+    """
+    mock_list.return_value = [{"doc_id": "d1", "source": "file.pdf", "chunk_count": 3}]
+    mock_direct.return_value = _make_answer_chain()
+
+    response = client.post(
+        "/api/chat",
+        json={
+            "question": "Xin chào",
+            "room_code": "TESTROOM",
+            "active_doc_ids": [],
+        },
+    )
+    assert response.status_code == 200
+
+    events = parse_sse_events(response.text)
+    end_event = _end_event(events)
+
+    # Direct chain was used; RAG retrieval never happened; no sources.
+    mock_direct.return_value.stream.assert_called_once()
+    mock_retrieve.assert_not_called()
+    assert end_event["sources"] == []
     """Missing room_code field → 400 (Requirement 5.4)."""
     response = client.post("/api/chat", json={"question": "Hi"})
     # Pydantic rejects the missing required field (422) before our 400 check.

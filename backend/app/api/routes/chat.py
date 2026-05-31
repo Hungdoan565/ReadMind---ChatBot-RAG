@@ -81,16 +81,25 @@ async def chat(request: Request, body: ChatRequest):
 
     session_id = body.session_id or str(uuid.uuid4())
     room_code = body.room_code.strip()
-    doc_ids = body.active_doc_ids  # May be None (search all docs in room)
+    doc_ids = body.active_doc_ids  # None → search all docs in room; [] → use no docs
+
+    # Did the client explicitly select zero documents? That means "trả lời như AI
+    # chung, đừng đọc tài liệu" — distinct from None (no filter → search all).
+    explicit_no_docs = doc_ids is not None and len(doc_ids) == 0
 
     # Check if room has any documents.
     # list_documents() is a blocking SQL call — offload to a worker thread so it
     # never stalls the event loop (a prior version stalled here and 502'd).
     room_docs = await run_in_threadpool(list_documents, room_code)
-    has_documents = len(room_docs) > 0
 
-    # Validate active_doc_ids belong to this room (only if docs exist and user specified)
-    if has_documents and doc_ids:
+    # Use RAG only when the room has documents AND the user hasn't deselected
+    # everything. With zero documents selected we fall through to the direct
+    # (general-AI) chain, even if the room itself contains documents.
+    use_rag = len(room_docs) > 0 and not explicit_no_docs
+
+    # Validate active_doc_ids belong to this room (only when actually using RAG
+    # with a non-empty selection).
+    if use_rag and doc_ids:
         try:
             doc_ids = await run_in_threadpool(
                 validate_doc_ids_in_room, doc_ids, room_code
@@ -103,7 +112,7 @@ async def chat(request: Request, body: ChatRequest):
             # Emit start event
             yield f"data: {json.dumps({'event': 'start', 'session_id': session_id})}\n\n"
 
-            if has_documents:
+            if use_rag:
                 # Room has documents → use RAG chain.
                 # Single-retrieve orchestration (Bug 3 fix):
                 #   contextualize → retrieve_docs ONCE → format context →
@@ -139,8 +148,12 @@ async def chat(request: Request, body: ChatRequest):
                     for doc in docs
                 ]
             else:
-                # Room is empty → use direct chain (general AI)
-                logger.info(f"Streaming direct chain for room {room_code} (no docs)")
+                # No usable documents (empty room, or user deselected all docs)
+                # → use direct chain (general AI knowledge, no retrieval).
+                logger.info(
+                    f"Streaming direct chain for room {room_code} "
+                    f"(no docs selected/available)"
+                )
                 direct_chain = get_direct_chain()
                 for chunk in direct_chain.stream(
                     {"input": body.question},
