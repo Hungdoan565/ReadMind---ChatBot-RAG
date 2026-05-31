@@ -10,42 +10,47 @@
 /* Light theme (default) */
 :root {
   /* Background colors */
-  --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --bg-chat: #f9fafb;
+  --bg-primary: #FAFAF9;
+  --bg-secondary: #F4F4F2;
+  --bg-tertiary: #E9E9E6;
+  --bg-chat: #FAFAF9;
   
   /* Text colors */
-  --text-primary: #111827;
-  --text-secondary: #4b5563;
-  --text-tertiary: #9ca3af;
+  --text-primary: #1C1917;
+  --text-secondary: #57534E;
+  --text-tertiary: #A8A29E;
   --text-inverse: #ffffff;
   
   /* Border colors */
-  --border-primary: #e5e7eb;
-  --border-secondary: #d1d5db;
+  --border-primary: #E2E0DC;
+  --border-secondary: #D6D3CD;
   
   /* Accent colors */
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --accent-light: rgba(99, 102, 241, 0.1);
+  --accent: #0D9488;
+  --accent-hover: #0F766E;
+  --accent-light: rgba(13, 148, 136, 0.10);
   
   /* Sidebar - theme-aware */
-  --sidebar-bg: #f3f4f6;
-  --sidebar-bg-light: #e5e7eb;
-  --sidebar-border: #d1d5db;
-  --sidebar-text: #111827;
-  --sidebar-text-secondary: #6b7280;
+  --sidebar-bg: #F4F4F2;
+  --sidebar-bg-light: #E9E9E6;
+  --sidebar-border: #E2E0DC;
+  --sidebar-text: #1C1917;
+  --sidebar-text-secondary: #57534E;
   
   /* Glass effect colors */
-  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-bg: rgba(250, 250, 249, 0.72);
   --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shadow: rgba(0, 0, 0, 0.1);
+  --glass-shadow: rgba(13, 148, 136, 0.10);
+  
+  /* Corner radius scale */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   
   /* Status colors */
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
+  --success: #15803D;
+  --warning: #B45309;
+  --error: #B91C1C;
   
   /* Z-index scale */
   --z-base: 0;
@@ -65,36 +70,44 @@
 /* Dark theme */
 [data-theme="dark"] {
   /* Background colors */
-  --bg-primary: #0f0f1a;
-  --bg-secondary: #1a1a2e;
-  --bg-tertiary: #25253a;
-  --bg-chat: #0f0f1a;
+  --bg-primary: #1A1A18;
+  --bg-secondary: #232320;
+  --bg-tertiary: #2D2D29;
+  --bg-chat: #1A1A18;
   
   /* Text colors */
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-tertiary: #9ca3af;
+  --text-primary: #F5F5F3;
+  --text-secondary: #C7C5BF;
+  --text-tertiary: #8C8A84;
   --text-inverse: #111827;
   
   /* Border colors */
-  --border-primary: #363654;
-  --border-secondary: #4b5563;
+  --border-primary: #3A3A35;
+  --border-secondary: #4A4A44;
+  
+  /* Accent colors */
+  --accent: #2DD4BF;
+  --accent-hover: #5EEAD4;
+  --accent-light: rgba(45, 212, 191, 0.14);
   
   /* Sidebar - dark theme */
-  --sidebar-bg: #1a1a2e;
-  --sidebar-bg-light: #25253a;
-  --sidebar-border: #363654;
-  --sidebar-text: #ffffff;
-  --sidebar-text-secondary: #9ca3af;
+  --sidebar-bg: #232320;
+  --sidebar-bg-light: #2D2D29;
+  --sidebar-border: #3A3A35;
+  --sidebar-text: #F5F5F3;
+  --sidebar-text-secondary: #8C8A84;
   
   /* Glass effect colors */
-  --glass-bg: rgba(15, 15, 26, 0.8);
+  --glass-bg: rgba(26, 26, 24, 0.82);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: rgba(0, 0, 0, 0.3);
+  --glass-shadow: rgba(0, 0, 0, 0.35);
 }
 
 /* Tailwind v4 custom theme using CSS variables */
 @theme {
+  /* Fonts */
+  --font-sans: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Outfit', ui-sans-serif, system-ui, sans-serif;
   /* Custom colors */
   --color-sidebar: var(--sidebar-bg);
   --color-sidebar-light: var(--sidebar-bg-light);
@@ -109,11 +122,21 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global focus ring for keyboard navigation.
+   Placed in @layer base so component-level `focus:outline-none` utilities
+   (e.g. the chat textarea, which shows its own wrapper ring) still win. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 
 /* Custom scrollbar */
@@ -235,12 +258,18 @@ body {
 }
 
 .markdown-content a {
-  color: #6366f1;
+  color: var(--accent);
   text-decoration: underline;
 }
 
 .markdown-content a:hover {
-  color: #4f46e5;
+  color: var(--accent-hover);
+}
+
+/* Horizontal scroll wrapper for wide tables (keeps tables inside the bubble) */
+.md-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
 }
 
 .markdown-content table {
@@ -248,18 +277,34 @@ body {
   border-collapse: collapse;
   margin: 0.75rem 0;
   font-size: 0.875rem;
+  color: var(--text-primary);
 }
 
 .markdown-content th,
 .markdown-content td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-primary);
   padding: 0.5rem 0.75rem;
   text-align: left;
+  color: var(--text-primary);
 }
 
 .markdown-content th {
-  background-color: #f9fafb;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
   font-weight: 600;
+}
+
+/* Scrollable container for rendered Mermaid diagrams so large/wide diagrams
+   scroll inside the message bubble instead of overflowing it (Req 9.3). */
+.md-mermaid {
+  overflow: auto;
+  max-width: 100%;
+  margin: 0.75rem 0;
+}
+
+.md-mermaid svg {
+  max-width: none;
+  height: auto;
 }
 
 .markdown-content hr {
@@ -333,35 +378,6 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 0.25rem;
-}
-
-/* ========================================
-   GRADIENT TEXT ANIMATION
-   ======================================== */
-
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-.gradient-text {
-  background: linear-gradient(
-    135deg,
-    var(--accent) 0%,
-    #a855f7 25%,
-    #ec4899 50%,
-    var(--accent) 75%,
-    var(--accent) 100%
-  );
-  background-size: 200% 200%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 4s ease infinite;
 }
 
 /* ========================================
@@ -444,5 +460,20 @@ body {
     right: auto;
     z-index: auto;
     padding-bottom: 0;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
