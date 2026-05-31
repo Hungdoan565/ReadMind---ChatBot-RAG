@@ -2,6 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 
 const STORAGE_KEY = 'readmind_room_code';
 
+function syncRoomToUrl(code: string): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set('room', code);
+  window.history.replaceState({}, '', url.toString());
+}
+
 /**
  * Generate a short, readable room code (8 uppercase chars)
  * Format: XXXX-XXXX for readability
@@ -39,15 +45,19 @@ export function useRoom(): UseRoomReturn {
     // 1. Check URL first (shared link)
     const urlRoom = getRoomFromUrl();
     if (urlRoom && urlRoom.trim()) {
-      setRoomCodeState(urlRoom.trim());
-      localStorage.setItem(STORAGE_KEY, urlRoom.trim());
+      const normalized = urlRoom.trim();
+      setRoomCodeState(normalized);
+      localStorage.setItem(STORAGE_KEY, normalized);
+      syncRoomToUrl(normalized);
       return;
     }
 
     // 2. Check localStorage (returning user)
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored && stored.trim()) {
-      setRoomCodeState(stored.trim());
+      const normalized = stored.trim();
+      setRoomCodeState(normalized);
+      syncRoomToUrl(normalized);
       return;
     }
 
@@ -55,18 +65,21 @@ export function useRoom(): UseRoomReturn {
     const newCode = generateRoomCode();
     setRoomCodeState(newCode);
     localStorage.setItem(STORAGE_KEY, newCode);
+    syncRoomToUrl(newCode);
   }, []);
 
   const setRoomCode = useCallback((code: string) => {
     const trimmed = code.trim();
     setRoomCodeState(trimmed);
     localStorage.setItem(STORAGE_KEY, trimmed);
+    syncRoomToUrl(trimmed);
   }, []);
 
   const regenerateRoom = useCallback(() => {
     const newCode = generateRoomCode();
     setRoomCodeState(newCode);
     localStorage.setItem(STORAGE_KEY, newCode);
+    syncRoomToUrl(newCode);
   }, []);
 
   const copyRoomToClipboard = useCallback(() => {

@@ -8,11 +8,13 @@ interface FileUploadProps {
   onUploadComplete: (item: IngestHistoryItem) => void;
 }
 
-const ACCEPTED_TYPES = ['.pdf', '.docx', '.txt'];
+const ACCEPTED_TYPES = ['.pdf', '.docx', '.txt', '.xlsx', '.csv'];
 const ACCEPTED_MIME_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   'text/plain',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
 ];
 
 export function FileUpload({ roomCode, onUploadComplete }: FileUploadProps) {
@@ -25,10 +27,10 @@ export function FileUpload({ roomCode, onUploadComplete }: FileUploadProps) {
   const validateFile = (file: File): string | null => {
     const extension = '.' + file.name.split('.').pop()?.toLowerCase();
     if (!ACCEPTED_TYPES.includes(extension) && !ACCEPTED_MIME_TYPES.includes(file.type)) {
-      return `Invalid file type. Accepted: ${ACCEPTED_TYPES.join(', ')}`;
+      return `Định dạng không hợp lệ. Chấp nhận: ${ACCEPTED_TYPES.join(', ')}`;
     }
     if (file.size > 50 * 1024 * 1024) {
-      return 'File size exceeds 50MB limit';
+      return 'Kích thước file vượt quá giới hạn 50MB';
     }
     return null;
   };
@@ -56,7 +58,7 @@ export function FileUpload({ roomCode, onUploadComplete }: FileUploadProps) {
         timestamp: new Date(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Upload failed';
+      const message = err instanceof Error ? err.message : 'Tải lên thất bại';
       setError(message);
       onUploadComplete({
         id: Date.now().toString(),
@@ -151,14 +153,14 @@ export function FileUpload({ roomCode, onUploadComplete }: FileUploadProps) {
               Kéo thả file vào đây hoặc click để chọn
             </p>
             <p className="text-xs text-[var(--text-tertiary)]">
-              PDF, DOCX, TXT (max 50MB)
+              PDF, DOCX, TXT, XLSX, CSV (max 50MB)
             </p>
           </>
         )}
       </div>
 
       {error && (
-        <div className="mt-3 p-2 bg-red-900/30 border border-red-700 rounded text-red-300 text-xs">
+        <div className="mt-3 p-2 border border-[var(--error)]/30 bg-[var(--error)]/10 rounded text-[var(--error)] text-xs">
           {error}
         </div>
       )}

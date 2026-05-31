@@ -109,7 +109,7 @@ export function SourcePopover({
             {source.page !== undefined && (
               <span className="inline-block text-xs bg-[var(--bg-tertiary)] text-[var(--text-secondary)] 
                              px-2 py-0.5 rounded mb-2">
-                Page {source.page}
+                Trang {source.page}
               </span>
             )}
             <p className="text-sm text-[var(--text-secondary)] leading-relaxed line-clamp-4">
@@ -132,7 +132,7 @@ export function SourcePopover({
                            hover:bg-[var(--accent-hover)] transition-colors"
               >
                 <MessageSquare className="w-4 h-4" />
-                Ask about this source
+                Hỏi về nguồn này
               </motion.button>
             </div>
           )}

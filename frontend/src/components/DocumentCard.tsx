@@ -125,7 +125,7 @@ export function DocumentCard({
 
       {/* Metadata */}
       <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-        <span>{chunkCount} chunk{chunkCount !== 1 ? 's' : ''}</span>
+        <span>{chunkCount} đoạn</span>
         {fileSize && (
           <>
             <span>•</span>
@@ -143,7 +143,7 @@ export function DocumentCard({
           }}
           className="p-1.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] 
                      hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors"
-          title="Ask about this document"
+          title="Hỏi về tài liệu này"
           disabled={isDeleting}
         >
           <MessageSquare className="w-3.5 h-3.5" />
@@ -154,8 +154,8 @@ export function DocumentCard({
             onDelete();
           }}
           className="p-1.5 rounded-md bg-[var(--bg-tertiary)] text-[var(--text-secondary)] 
-                     hover:text-red-400 hover:bg-red-400/10 transition-colors"
-          title="Delete document"
+                     hover:text-[var(--error)] hover:bg-[var(--error)]/10 transition-colors"
+          title="Xóa tài liệu"
           disabled={isDeleting}
         >
           {isDeleting ? (

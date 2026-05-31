@@ -5,22 +5,28 @@ import { Sidebar } from './Sidebar';
 
 interface SidebarDrawerProps {
   roomCode: string;
+  isAuthenticated: boolean;
+  onSelectRoom: (roomCode: string) => void;
   isOpen: boolean;
   onClose: () => void;
   onClearChat: () => void;
   activeDocIds: string[];
   onActiveDocsChange: (ids: string[]) => void;
   onAskAboutDoc: (docId: string, source: string) => void;
+  onRegenerateRoom: () => void;
 }
 
 export function SidebarDrawer({
   roomCode,
+  isAuthenticated,
+  onSelectRoom,
   isOpen,
   onClose,
   onClearChat,
   activeDocIds,
   onActiveDocsChange,
   onAskAboutDoc,
+  onRegenerateRoom,
 }: SidebarDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +108,11 @@ export function SidebarDrawer({
             <div className="h-full overflow-hidden">
               <Sidebar
                 roomCode={roomCode}
+                isAuthenticated={isAuthenticated}
+                onSelectRoom={(code) => {
+                  onSelectRoom(code);
+                  onClose();
+                }}
                 onClearChat={() => {
                   onClearChat();
                   onClose();
@@ -110,6 +121,10 @@ export function SidebarDrawer({
                 onActiveDocsChange={onActiveDocsChange}
                 onAskAboutDoc={(docId, source) => {
                   onAskAboutDoc(docId, source);
+                  onClose();
+                }}
+                onRegenerateRoom={() => {
+                  onRegenerateRoom();
                   onClose();
                 }}
               />

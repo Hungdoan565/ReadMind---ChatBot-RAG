@@ -18,7 +18,7 @@ export function InlineError({ message, onRetry }: InlineErrorProps) {
       
       <div className="flex-1">
         <p className="text-sm text-[var(--error)] font-medium">
-          Something went wrong
+          Đã xảy ra lỗi
         </p>
         <p className="text-xs text-[var(--error)]/80 mt-0.5">
           {message}
@@ -35,7 +35,7 @@ export function InlineError({ message, onRetry }: InlineErrorProps) {
                      hover:bg-[var(--error)]/30 transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
-          Retry
+          Thử lại
         </motion.button>
       )}
     </motion.div>

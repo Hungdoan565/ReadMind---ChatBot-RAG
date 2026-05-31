@@ -23,6 +23,34 @@ export interface ChatResponse {
   sources: SourceDocument[];
 }
 
+// Streaming event types
+export interface ChatStreamStartEvent {
+  event: 'start';
+  session_id: string;
+}
+
+export interface ChatStreamTokenEvent {
+  event: 'token';
+  data: string;
+}
+
+export interface ChatStreamEndEvent {
+  event: 'end';
+  session_id: string;
+  sources: SourceDocument[];
+}
+
+export interface ChatStreamErrorEvent {
+  event: 'error';
+  data: string;
+}
+
+export type ChatStreamEvent =
+  | ChatStreamStartEvent
+  | ChatStreamTokenEvent
+  | ChatStreamEndEvent
+  | ChatStreamErrorEvent;
+
 export interface IngestResponse {
   doc_id: string;
   source: string;
@@ -39,6 +67,7 @@ export interface ChatMessage {
   sources?: SourceDocument[];
   timestamp: Date;
   isError?: boolean;
+  isStreaming?: boolean;
 }
 
 export interface IngestHistoryItem {
@@ -67,4 +96,45 @@ export interface StoredDocument {
 export interface DocumentsResponse {
   documents: StoredDocument[];
   total: number;
+}
+
+// Auth Types
+export interface AuthUser {
+  id: string;
+  email: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  is_verified: boolean;
+  created_at: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+// Room Types
+export interface RoomInfo {
+  room_code: string;
+  created_at: string;
+  document_count: number;
+}
+
+export interface RoomsResponse {
+  rooms: RoomInfo[];
+}
+
+export interface ClaimRoomResponse {
+  room_code: string;
+  status: string;
+  message: string;
 }

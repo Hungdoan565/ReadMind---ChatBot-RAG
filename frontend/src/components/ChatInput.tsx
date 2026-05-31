@@ -1,15 +1,16 @@
 import { useState, useCallback, useRef, useEffect, type KeyboardEvent, type FormEvent } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Square } from 'lucide-react';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
   isLoading: boolean;
+  onStop?: () => void;
 }
 
 const MIN_HEIGHT = 48;
 const MAX_HEIGHT = 200;
 
-export function ChatInput({ onSend, isLoading }: ChatInputProps) {
+export function ChatInput({ onSend, isLoading, onStop }: ChatInputProps) {
   const [input, setInput] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -97,7 +98,8 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
           
           <button
             type="submit"
-            disabled={!input.trim() || isLoading}
+            disabled={isLoading ? false : !input.trim()}
+            onClick={isLoading ? (e) => { e.preventDefault(); onStop?.(); } : undefined}
             className="relative flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center 
                        transition-all duration-200 
                        bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white
@@ -107,7 +109,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
                        disabled:cursor-not-allowed disabled:shadow-none disabled:scale-100"
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Square className="w-4 h-4 fill-current" />
             ) : (
               <Send className="w-5 h-5" />
             )}

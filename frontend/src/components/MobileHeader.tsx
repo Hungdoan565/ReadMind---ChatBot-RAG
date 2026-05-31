@@ -15,16 +15,16 @@ export function MobileHeader({ onMenuClick, onClearChat, messageCount }: MobileH
           <button
             onClick={onMenuClick}
             className="touch-target flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
-            aria-label="Open menu"
+            aria-label="Mở menu"
           >
             <Menu className="w-6 h-6 text-[var(--text-primary)]" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-[var(--text-primary)]">RAG Chat</h1>
+            <h1 className="text-lg font-semibold text-[var(--text-primary)]">ReadMind</h1>
             <p className="text-xs text-[var(--text-secondary)]">
               {messageCount === 0 
-                ? 'Start a conversation'
-                : `${messageCount} message${messageCount === 1 ? '' : 's'}`
+                ? 'Bắt đầu trò chuyện'
+                : `${messageCount} tin nhắn`
               }
             </p>
           </div>
@@ -35,7 +35,7 @@ export function MobileHeader({ onMenuClick, onClearChat, messageCount }: MobileH
             <button 
               onClick={onClearChat} 
               className="touch-target flex items-center justify-center rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors text-[var(--text-secondary)]"
-              aria-label="Clear chat"
+              aria-label="Xóa cuộc trò chuyện"
             >
               <Trash2 className="w-5 h-5" />
             </button>

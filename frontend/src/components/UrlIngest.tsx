@@ -28,7 +28,7 @@ export function UrlIngest({ roomCode, onIngestComplete }: UrlIngestProps) {
     if (!url.trim()) return;
     
     if (!validateUrl(url.trim())) {
-      setError('Please enter a valid URL');
+      setError('Vui lòng nhập một URL hợp lệ');
       return;
     }
 
@@ -49,7 +49,7 @@ export function UrlIngest({ roomCode, onIngestComplete }: UrlIngestProps) {
       
       setUrl('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to ingest URL';
+      const message = err instanceof Error ? err.message : 'Không thể thêm URL';
       setError(message);
       onIngestComplete({
         id: Date.now().toString(),
@@ -104,14 +104,14 @@ export function UrlIngest({ roomCode, onIngestComplete }: UrlIngestProps) {
           ) : (
             <>
               <Link className="w-4 h-4" />
-              <span>Ingest URL</span>
+              <span>Thêm URL</span>
             </>
           )}
         </button>
       </form>
 
       {error && (
-        <div className="mt-3 p-2 bg-red-900/30 border border-red-700 rounded text-red-300 text-xs">
+        <div className="mt-3 p-2 border border-[var(--error)]/30 bg-[var(--error)]/10 rounded text-[var(--error)] text-xs">
           {error}
         </div>
       )}

@@ -12,7 +12,7 @@ export function SourceList({ sources, onAskAboutSource }: SourceListProps) {
   return (
     <div className="mt-3 pt-3 border-t border-[var(--border-primary)]/30">
       <p className="text-xs text-[var(--text-tertiary)] mb-2">
-        Sources ({sources.length})
+        Nguồn ({sources.length})
       </p>
       <div className="flex flex-wrap gap-2">
         {sources.map((source, index) => (

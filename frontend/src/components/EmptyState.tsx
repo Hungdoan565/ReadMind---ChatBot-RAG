@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileText, HelpCircle, Zap, AlertTriangle, Sparkles, Bot } from 'lucide-react';
+import { FileText, HelpCircle, Zap, AlertTriangle } from 'lucide-react';
 import { DocumentLogoIcon } from './DocumentLogoIcon';
 
 interface EmptyStateProps {
@@ -13,39 +13,10 @@ const suggestionChips = [
   { icon: Zap, text: 'Tìm kiếm thông tin quan trọng' },
 ];
 
-const floatingIcons = [
-  { icon: Sparkles, delay: 0, x: -60, y: -40 },
-  { icon: Bot, delay: 0.2, x: 70, y: -30 },
-  { icon: FileText, delay: 0.4, x: -50, y: 50 },
-];
-
 export function EmptyState({ hasActiveDocuments, onSuggestionClick }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center px-4 relative">
-      {/* Floating icons */}
       <div className="relative mb-8">
-        {floatingIcons.map((item, index) => (
-          <motion.div
-            key={index}
-            className="absolute"
-            style={{ left: item.x, top: item.y }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ 
-              opacity: [0.3, 0.6, 0.3],
-              scale: [0.8, 1, 0.8],
-              y: [0, -10, 0]
-            }}
-            transition={{
-              duration: 3,
-              delay: item.delay,
-              repeat: Infinity,
-              ease: 'easeInOut'
-            }}
-          >
-            <item.icon className="w-6 h-6 text-[var(--accent)] opacity-40" />
-          </motion.div>
-        ))}
-        
         {/* Main icon */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
@@ -54,7 +25,7 @@ export function EmptyState({ hasActiveDocuments, onSuggestionClick }: EmptyState
           className="w-20 h-20 glass-surface rounded-2xl flex items-center justify-center
                      shadow-lg shadow-[var(--accent)]/10"
         >
-          <DocumentLogoIcon size={40} />
+          <DocumentLogoIcon size={40} className="text-[var(--accent)]" />
         </motion.div>
       </div>
 
@@ -63,7 +34,7 @@ export function EmptyState({ hasActiveDocuments, onSuggestionClick }: EmptyState
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="text-2xl font-bold mb-3 gradient-text"
+        className="text-2xl font-bold mb-3 font-heading text-[var(--text-primary)]"
       >
         Tôi có thể giúp gì cho bạn hôm nay?
       </motion.h3>
