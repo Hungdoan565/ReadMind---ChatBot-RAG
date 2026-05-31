@@ -42,4 +42,5 @@ def get_llm() -> ChatGroq:
         max_tokens=settings.LLM_MAX_TOKENS,
         groq_api_key=settings.GROQ_API_KEY,
         http_client=_create_http_client(),
+        streaming=True,
     )
