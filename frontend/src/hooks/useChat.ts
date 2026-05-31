@@ -1,62 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { streamMessage } from '../api/chat';
+import { loadTranscript, saveTranscript } from '../lib/conversationStore';
 import type { ChatMessage } from '../types';
-
-// ---------------------------------------------------------------------------
-// Storage helpers
-// ---------------------------------------------------------------------------
-
-const CHAT_STORAGE_PREFIX = 'readmind_chat:';
-
-interface PersistedChat {
-  messages: Array<Omit<ChatMessage, 'timestamp'> & { timestamp: string }>;
-  sessionId: string | null;
-}
-
-function storageKey(roomCode: string): string {
-  return `${CHAT_STORAGE_PREFIX}${roomCode}`;
-}
-
-function saveChat(roomCode: string, messages: ChatMessage[], sessionId: string | null): void {
-  if (!roomCode) return;
-  try {
-    const data: PersistedChat = {
-      messages: messages.map(({ isStreaming: _s, ...m }) => ({
-        ...m,
-        timestamp: m.timestamp.toISOString(),
-      })),
-      sessionId,
-    };
-    localStorage.setItem(storageKey(roomCode), JSON.stringify(data));
-  } catch {
-    // Storage quota or serialization error — silently ignore
-  }
-}
-
-function loadChat(roomCode: string): { messages: ChatMessage[]; sessionId: string | null } {
-  if (!roomCode) return { messages: [], sessionId: null };
-  try {
-    const raw = localStorage.getItem(storageKey(roomCode));
-    if (!raw) return { messages: [], sessionId: null };
-    const data = JSON.parse(raw) as PersistedChat;
-    const messages: ChatMessage[] = (data.messages ?? []).map((m) => ({
-      ...m,
-      timestamp: new Date(m.timestamp),
-    }));
-    return { messages, sessionId: data.sessionId ?? null };
-  } catch {
-    return { messages: [], sessionId: null };
-  }
-}
-
-function removeChat(roomCode: string): void {
-  if (!roomCode) return;
-  try {
-    localStorage.removeItem(storageKey(roomCode));
-  } catch {
-    // ignore
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -74,47 +19,53 @@ interface UseChatReturn {
   messages: ChatMessage[];
   isLoading: boolean;
   sessionId: string | null;
-  activeDocIds: string[];
-  setActiveDocIds: (ids: string[]) => void;
   sendUserMessage: (content: string) => Promise<void>;
-  clearMessages: () => void;
   stopGeneration: () => void;
   regenerateLastAnswer: () => Promise<void>;
 }
 
-export function useChat(roomCode: string): UseChatReturn {
-  // Hydrate from storage on mount / room change
+export function useChat(
+  roomCode: string,
+  conversationId: string | null,
+  activeDocIds: string[],
+): UseChatReturn {
+  // Hydrate from storage on mount / room or conversation change. When there is no
+  // active conversation (conversationId === null) we render an empty transcript.
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (!roomCode) return [];
-    return loadChat(roomCode).messages;
+    if (!roomCode || !conversationId) return [];
+    return loadTranscript(roomCode, conversationId).messages;
   });
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(() => {
-    if (!roomCode) return null;
-    return loadChat(roomCode).sessionId;
+    if (!roomCode || !conversationId) return null;
+    return loadTranscript(roomCode, conversationId).sessionId;
   });
-  const [activeDocIds, setActiveDocIds] = useState<string[]>([]);
 
   // AbortController ref for the active stream
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // When roomCode changes, load that room's transcript
+  // When roomCode or conversationId changes, load that conversation's transcript.
+  // With no active conversation, render empty (treat like the current empty case).
   useEffect(() => {
-    if (!roomCode) return;
-    const stored = loadChat(roomCode);
+    if (!roomCode || !conversationId) {
+      setMessages([]);
+      setSessionId(null);
+      return;
+    }
+    const stored = loadTranscript(roomCode, conversationId);
     setMessages(stored.messages);
     setSessionId(stored.sessionId);
-  }, [roomCode]);
+  }, [roomCode, conversationId]);
 
   // Persist to localStorage whenever messages/sessionId settle (not mid-stream, not empty state)
   const isStreamingRef = useRef(false);
   useEffect(() => {
     if (isStreamingRef.current) return; // skip per-token writes
-    if (!roomCode) return;
-    // Don't re-write storage when there's nothing to persist (e.g. after clearMessages)
+    if (!roomCode || !conversationId) return; // nothing to persist without an active conversation
+    // Don't re-write storage when there's nothing to persist (e.g. empty conversation)
     if (messages.length === 0 && sessionId === null) return;
-    saveChat(roomCode, messages, sessionId);
-  }, [messages, sessionId, roomCode]);
+    saveTranscript(roomCode, conversationId, messages, sessionId);
+  }, [messages, sessionId, roomCode, conversationId]);
 
   // ---------------------------------------------------------------------------
   // sendUserMessage (core streaming logic)
@@ -276,16 +227,6 @@ export function useChat(roomCode: string): UseChatReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // clearMessages
-  // ---------------------------------------------------------------------------
-
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-    setSessionId(null);
-    removeChat(roomCode);
-  }, [roomCode]);
-
-  // ---------------------------------------------------------------------------
   // regenerateLastAnswer
   // ---------------------------------------------------------------------------
 
@@ -318,10 +259,7 @@ export function useChat(roomCode: string): UseChatReturn {
     messages,
     isLoading,
     sessionId,
-    activeDocIds,
-    setActiveDocIds,
     sendUserMessage,
-    clearMessages,
     stopGeneration,
     regenerateLastAnswer,
   };

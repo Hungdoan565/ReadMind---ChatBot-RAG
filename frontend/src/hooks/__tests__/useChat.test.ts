@@ -22,12 +22,11 @@ describe('useChat', () => {
   });
 
   it('initializes with empty state', () => {
-    const { result } = renderHook(() => useChat('ROOM-1234'));
+    const { result } = renderHook(() => useChat('ROOM-1234', 'conv-1', []));
 
     expect(result.current.messages).toEqual([]);
     expect(result.current.isLoading).toBe(false);
     expect(result.current.sessionId).toBeNull();
-    expect(result.current.activeDocIds).toEqual([]);
   });
 
   it('streams a response and stores session id and sources', async () => {
@@ -40,7 +39,7 @@ describe('useChat', () => {
       ]) as AsyncGenerator<never>,
     );
 
-    const { result } = renderHook(() => useChat('ROOM-1234'));
+    const { result } = renderHook(() => useChat('ROOM-1234', 'conv-1', []));
 
     await act(async () => {
       await result.current.sendUserMessage('Hi');
@@ -60,16 +59,14 @@ describe('useChat', () => {
     });
   });
 
-  it('passes active document ids to the API call', async () => {
+  it('passes the active document ids parameter to the API call', async () => {
     mockStreamMessage.mockImplementation(() =>
       makeStream([{ event: 'end', session_id: 'session-2', sources: [] }]) as AsyncGenerator<never>,
     );
 
-    const { result } = renderHook(() => useChat('ROOM-2222'));
-
-    act(() => {
-      result.current.setActiveDocIds(['doc-1', 'doc-2']);
-    });
+    // activeDocIds is now an input parameter (owned by useDocumentSelection),
+    // not internal state.
+    const { result } = renderHook(() => useChat('ROOM-2222', 'conv-1', ['doc-1', 'doc-2']));
 
     await act(async () => {
       await result.current.sendUserMessage('Filter');
@@ -83,7 +80,7 @@ describe('useChat', () => {
       makeStream([{ event: 'error', data: 'Backend failed' }]) as AsyncGenerator<never>,
     );
 
-    const { result } = renderHook(() => useChat('ROOM-3333'));
+    const { result } = renderHook(() => useChat('ROOM-3333', 'conv-1', []));
 
     await act(async () => {
       await result.current.sendUserMessage('Oops');
@@ -96,20 +93,25 @@ describe('useChat', () => {
     });
   });
 
-  it('resets messages and session when cleared', async () => {
+  it('shows an empty transcript when switching to a fresh conversation', async () => {
     mockStreamMessage.mockImplementation(() =>
       makeStream([{ event: 'start', session_id: 'session-clear' }, { event: 'end', session_id: 'session-clear', sources: [] }]) as AsyncGenerator<never>,
     );
 
-    const { result } = renderHook(() => useChat('ROOM-4444'));
+    const { result, rerender } = renderHook(
+      ({ conv }) => useChat('ROOM-4444', conv, []),
+      { initialProps: { conv: 'conv-full' } },
+    );
 
     await act(async () => {
-      await result.current.sendUserMessage('Clear me');
+      await result.current.sendUserMessage('Fill this conversation');
     });
 
-    act(() => {
-      result.current.clearMessages();
-    });
+    expect(result.current.messages.length).toBeGreaterThan(0);
+
+    // Switching the active conversation to a brand-new (unstored) one loads an
+    // empty transcript — the replacement for the old clearMessages behavior.
+    rerender({ conv: 'conv-empty' });
 
     await waitFor(() => {
       expect(result.current.messages).toEqual([]);
@@ -121,7 +123,7 @@ describe('useChat', () => {
   // Persistence tests
   // ---------------------------------------------------------------------------
 
-  it('persists messages to localStorage after a stream completes', async () => {
+  it('persists messages to the conversation transcript key after a stream completes', async () => {
     mockStreamMessage.mockImplementation(() =>
       makeStream([
         { event: 'start', session_id: 'sess-persist' },
@@ -130,13 +132,14 @@ describe('useChat', () => {
       ]) as AsyncGenerator<never>,
     );
 
-    const { result } = renderHook(() => useChat('ROOM-PERSIST'));
+    const { result } = renderHook(() => useChat('ROOM-PERSIST', 'conv-persist', []));
 
     await act(async () => {
       await result.current.sendUserMessage('Save me');
     });
 
-    const raw = localStorage.getItem('readmind_chat:ROOM-PERSIST');
+    // Persistence now targets the per-conversation key readmind_chat:{room}:{convId}.
+    const raw = localStorage.getItem('readmind_chat:ROOM-PERSIST:conv-persist');
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw!);
     expect(parsed.sessionId).toBe('sess-persist');
@@ -146,8 +149,8 @@ describe('useChat', () => {
     expect(parsed.messages[1].isStreaming).toBeUndefined();
   });
 
-  it('revives timestamp as a Date on load', async () => {
-    // Pre-populate storage
+  it('revives timestamp as a Date on load', () => {
+    // Pre-populate the conversation transcript key
     const stored = {
       sessionId: 'sess-revive',
       messages: [
@@ -155,9 +158,9 @@ describe('useChat', () => {
         { id: 'msg-2', role: 'assistant', content: 'Hi there', timestamp: '2024-01-15T10:00:01.000Z' },
       ],
     };
-    localStorage.setItem('readmind_chat:ROOM-REVIVE', JSON.stringify(stored));
+    localStorage.setItem('readmind_chat:ROOM-REVIVE:conv-revive', JSON.stringify(stored));
 
-    const { result } = renderHook(() => useChat('ROOM-REVIVE'));
+    const { result } = renderHook(() => useChat('ROOM-REVIVE', 'conv-revive', []));
 
     // Messages should be hydrated immediately
     expect(result.current.messages).toHaveLength(2);
@@ -166,65 +169,53 @@ describe('useChat', () => {
     expect(result.current.sessionId).toBe('sess-revive');
   });
 
-  it('isolates storage per room — switching rooms loads that room transcript', async () => {
-    // Pre-populate two rooms
-    const roomA = {
+  it('isolates storage per conversation — switching the active conversation loads its transcript', async () => {
+    // Pre-populate two conversations in the same room
+    const convA = {
       sessionId: 'sess-a',
-      messages: [{ id: 'a1', role: 'user', content: 'Room A message', timestamp: new Date().toISOString() }],
+      messages: [{ id: 'a1', role: 'user', content: 'Conversation A message', timestamp: new Date().toISOString() }],
     };
-    const roomB = {
+    const convB = {
       sessionId: 'sess-b',
-      messages: [{ id: 'b1', role: 'user', content: 'Room B message', timestamp: new Date().toISOString() }],
+      messages: [{ id: 'b1', role: 'user', content: 'Conversation B message', timestamp: new Date().toISOString() }],
     };
-    localStorage.setItem('readmind_chat:ROOM-A', JSON.stringify(roomA));
-    localStorage.setItem('readmind_chat:ROOM-B', JSON.stringify(roomB));
+    localStorage.setItem('readmind_chat:ROOM-ISO:conv-a', JSON.stringify(convA));
+    localStorage.setItem('readmind_chat:ROOM-ISO:conv-b', JSON.stringify(convB));
 
-    // Mount with ROOM-A
-    const { result, rerender } = renderHook(({ room }) => useChat(room), {
-      initialProps: { room: 'ROOM-A' },
+    // Mount with conv-a
+    const { result, rerender } = renderHook(({ conv }) => useChat('ROOM-ISO', conv, []), {
+      initialProps: { conv: 'conv-a' },
     });
 
-    expect(result.current.messages[0].content).toBe('Room A message');
+    expect(result.current.messages[0].content).toBe('Conversation A message');
     expect(result.current.sessionId).toBe('sess-a');
 
-    // Switch to ROOM-B
-    rerender({ room: 'ROOM-B' });
+    // Switch to conv-b
+    rerender({ conv: 'conv-b' });
 
     await waitFor(() => {
-      expect(result.current.messages[0].content).toBe('Room B message');
+      expect(result.current.messages[0].content).toBe('Conversation B message');
       expect(result.current.sessionId).toBe('sess-b');
     });
   });
 
-  it('clearMessages removes the stored entry', async () => {
-    mockStreamMessage.mockImplementation(() =>
-      makeStream([
-        { event: 'start', session_id: 'sess-clear-store' },
-        { event: 'end', session_id: 'sess-clear-store', sources: [] },
-      ]) as AsyncGenerator<never>,
+  it('renders an empty transcript when there is no active conversation', () => {
+    localStorage.setItem(
+      'readmind_chat:ROOM-NULL:conv-x',
+      JSON.stringify({ sessionId: 'sess-x', messages: [{ id: 'x1', role: 'user', content: 'hi', timestamp: new Date().toISOString() }] }),
     );
 
-    const { result } = renderHook(() => useChat('ROOM-CLEAR'));
+    // A null conversationId is treated like the empty case: render nothing.
+    const { result } = renderHook(() => useChat('ROOM-NULL', null, []));
 
-    await act(async () => {
-      await result.current.sendUserMessage('Store this');
-    });
-
-    // Verify it was stored
-    expect(localStorage.getItem('readmind_chat:ROOM-CLEAR')).not.toBeNull();
-
-    act(() => {
-      result.current.clearMessages();
-    });
-
-    // Storage entry must be removed
-    expect(localStorage.getItem('readmind_chat:ROOM-CLEAR')).toBeNull();
+    expect(result.current.messages).toEqual([]);
+    expect(result.current.sessionId).toBeNull();
   });
 
   it('tolerates malformed storage and starts empty', () => {
-    localStorage.setItem('readmind_chat:ROOM-BAD', 'not valid json {{{{');
+    localStorage.setItem('readmind_chat:ROOM-BAD:conv-bad', 'not valid json {{{{');
 
-    const { result } = renderHook(() => useChat('ROOM-BAD'));
+    const { result } = renderHook(() => useChat('ROOM-BAD', 'conv-bad', []));
 
     expect(result.current.messages).toEqual([]);
     expect(result.current.sessionId).toBeNull();
