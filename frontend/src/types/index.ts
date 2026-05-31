@@ -138,3 +138,24 @@ export interface ClaimRoomResponse {
   status: string;
   message: string;
 }
+
+// Conversation Types
+// Conversation metadata (one entry per conversation in a room)
+export interface Conversation {
+  id: string;        // e.g. "conv-<epochMs>-<rand>"
+  title: string;     // generated, renamed, or placeholder
+  createdAt: number; // epoch milliseconds
+  updatedAt: number; // epoch milliseconds
+}
+
+// Persisted transcript blob (shape is identical to the existing persisted chat)
+export interface PersistedTranscript {
+  messages: Array<Omit<ChatMessage, 'timestamp'> & { timestamp: string }>;
+  sessionId: string | null;
+}
+
+// Persisted layout state
+export interface LayoutState {
+  leftCollapsed: boolean;
+  rightCollapsed: boolean;
+}
