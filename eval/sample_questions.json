@@ -5,18 +5,94 @@
   },
   {
     "question": "How does chunking affect RAG quality?",
-    "ground_truth": "Chunking is critical for RAG quality — 80% of RAG failures trace to ingestion and chunking problems. Chunk size (512 tokens with ~10% overlap) controls the granularity of retrieved context. Too large and the LLM loses focus; too small and context is fragmented."
+    "ground_truth": "Chunking is critical for RAG quality — about 80% of RAG failures trace to ingestion and chunking problems. Chunk size (around 512 tokens with ~10% overlap) controls the granularity of retrieved context. Too large and the LLM loses focus; too small and context is fragmented."
   },
   {
     "question": "What is hybrid search in RAG?",
-    "ground_truth": "Hybrid search combines dense vector search (semantic similarity via embeddings) with sparse BM25 keyword search. The results are fused using Reciprocal Rank Fusion (RRF), achieving ~91% recall@10 versus ~78% for dense-only search."
+    "ground_truth": "Hybrid search combines dense vector search (semantic similarity via embeddings) with sparse BM25 keyword search. The results are fused using Reciprocal Rank Fusion (RRF), achieving about 91% recall@10 versus roughly 78% for dense-only search."
   },
   {
     "question": "What are the key RAGAS evaluation metrics?",
-    "ground_truth": "RAGAS evaluates RAG pipelines using: faithfulness (are LLM claims grounded in retrieved context, target >=0.9), answer_relevancy (is the answer relevant to the question), and context_precision (are retrieved documents useful for the question, target >=0.75)."
+    "ground_truth": "RAGAS evaluates RAG pipelines using faithfulness (are LLM claims grounded in retrieved context, threshold 0.9), answer_relevancy (is the answer relevant to the question, threshold 0.8), and context_precision (are retrieved documents useful for the question, threshold 0.75)."
   },
   {
     "question": "Explain the difference between LCEL and LangChain legacy chains.",
     "ground_truth": "LCEL (LangChain Expression Language) is the modern approach using composable Runnables connected with the pipe operator. Legacy chains like RetrievalQA are deprecated. LCEL provides better composability, streaming support, and async-first design."
+  },
+  {
+    "question": "Why does grounding generation in retrieved documents reduce hallucination?",
+    "ground_truth": "A language model alone can produce fluent but factually wrong text. Grounding generation in retrieved source documents keeps the answer tied to real evidence, so the answer stays verifiable against the sources that were retrieved and hallucination is reduced."
+  },
+  {
+    "question": "What are the two stages of a RAG pipeline?",
+    "ground_truth": "A RAG pipeline has a retrieval stage and a generation stage. Retrieval searches a vector store and returns the most relevant chunks for the question; generation formats those chunks into context and passes them with the question to the language model, which writes the final answer."
+  },
+  {
+    "question": "What is a good default chunk size and overlap for RAG?",
+    "ground_truth": "A common default is around 512 tokens per chunk with about 10% overlap between neighboring chunks. The overlap preserves continuity so a sentence split across a boundary is still recoverable."
+  },
+  {
+    "question": "What is two-pass section-aware chunking?",
+    "ground_truth": "Two-pass chunking first splits a document on semantic section boundaries such as markdown headers and paragraph breaks. In the second pass, any section still larger than the configured chunk size is split again with a character-based splitter, keeping related content together while ensuring no chunk exceeds the size limit."
+  },
+  {
+    "question": "What metadata does each chunk preserve after ingestion?",
+    "ground_truth": "Each chunk keeps metadata from its source document including the source name, document id, and room code, and is annotated with a chunk index, a chunk total, and the nearest preceding section title."
+  },
+  {
+    "question": "What is BM25?",
+    "ground_truth": "BM25 is a classic sparse ranking function based on term frequency and inverse document frequency, with a saturation term so repeated words give diminishing returns. It is strong at matching exact keywords and rare terms that a dense embedding model might smooth over."
+  },
+  {
+    "question": "How does Reciprocal Rank Fusion (RRF) work?",
+    "ground_truth": "RRF merges several ranked lists into one. For each document it sums a score of one divided by a constant (often 60) plus the document's rank in each list. RRF does not require the raw scores to be on the same scale, making it a robust way to combine dense and BM25 rankings into a final fused order."
+  },
+  {
+    "question": "How large is the candidate pool fetched before reranking?",
+    "ground_truth": "The retriever fetches a larger candidate pool than the number of results it will return — typically three times the requested top_k. Fusing the full candidate pool before cutting gives the reranking stage many candidates to choose from."
+  },
+  {
+    "question": "Why use a cross-encoder reranker after hybrid search?",
+    "ground_truth": "A cross-encoder reranker reads the query and each candidate document together and scores how well they match, which is more accurate than comparing independent embeddings. This improves precision by promoting the most relevant documents to the top before they reach the language model. The project uses FlashRank as the cross-encoder."
+  },
+  {
+    "question": "Should reranking happen before or after cutting to the final number of documents?",
+    "ground_truth": "Reranking must happen first on the full fused candidate pool, and only then should the list be cut to the final number. If the cut happens before reranking, the cross-encoder only sees a small pre-trimmed set and its benefit is largely lost. The final number returned is the smaller of the configured rerank top_n and the caller's requested top_k."
+  },
+  {
+    "question": "What happens when the reranker is unavailable or raises an error?",
+    "ground_truth": "If the reranker is unavailable or raises an error, the system falls back to the fused RRF ordering, returns the top results from that fused list, and logs a warning. Reranking failure never crashes the pipeline; it degrades gracefully to the fused ranking."
+  },
+  {
+    "question": "What is faithfulness in RAGAS?",
+    "ground_truth": "Faithfulness measures whether the claims in the generated answer are grounded in the retrieved context. A faithful answer makes no statements that the retrieved documents do not support. In this project the faithfulness threshold is 0.9."
+  },
+  {
+    "question": "What does context precision measure?",
+    "ground_truth": "Context precision measures whether the retrieved documents are actually useful for answering the question. High context precision means the retriever returned relevant documents rather than noise. The context precision threshold in this project is 0.75."
+  },
+  {
+    "question": "How does the evaluation quality gate map results to exit codes?",
+    "ground_truth": "The quality gate runs RAGAS against a golden set, compares each metric to its threshold, and returns PASS when every metric meets its threshold or FAIL when any falls below. The CLI maps PASS to exit code 0, FAIL to 1, and SKIPPED to 2, where SKIPPED means a missing prerequisite and never shares the FAIL code."
+  },
+  {
+    "question": "What embedding model does the application use and why?",
+    "ground_truth": "The application uses the HuggingFace model all-MiniLM-L6-v2 to embed text. It runs locally on CPU with no API cost, which keeps ingestion cheap and avoids sending document text to an external embedding service. It is separate from the OpenAI embeddings RAGAS uses for evaluation."
+  },
+  {
+    "question": "Where are vectors stored in this project?",
+    "ground_truth": "Vectors are stored in PostgreSQL using the pgvector extension. The vector store is the single entry point for adding, listing, searching, and deleting documents. A feature flag selects pgvector by default or the legacy ChromaDB backend, and both expose identical public signatures."
+  },
+  {
+    "question": "How does room isolation work?",
+    "ground_truth": "Every vector carries its room code in metadata, and retrieval filters on the room code so only documents from the requested room are returned. This keeps one room's documents from leaking into another room's answers. Room isolation is metadata filtering, not cryptographic security."
+  },
+  {
+    "question": "What does the chat endpoint do when a room is empty versus when it has documents?",
+    "ground_truth": "When a room has documents, the chat endpoint uses the RAG chain and returns sources. When a room is empty, it uses a direct chain that answers from general knowledge, performs no retrieval, and returns no sources."
+  },
+  {
+    "question": "What is question contextualization in the RAG chain?",
+    "ground_truth": "Before retrieval, a follow-up question is contextualized: the chain reads conversation history read-only and rewrites a question like 'what about its cost' into a standalone question. If there is no history yet, the original question is used unchanged, saving a language model call on the first turn."
   }
 ]

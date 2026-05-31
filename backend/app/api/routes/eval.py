@@ -33,6 +33,7 @@ class EvalMetricResult(BaseModel):
 
 
 class EvalResponse(BaseModel):
+    status: str
     sample_count: int
     metrics: Dict[str, EvalMetricResult]
     error: Optional[str] = None
@@ -47,10 +48,15 @@ async def evaluate(request: EvalRequest):
     The endpoint runs the full RAG pipeline on each question, then
     scores the results using RAGAS metrics.
 
-    Thresholds:
-      - faithfulness      >= 0.90 (PASS)
-      - answer_relevancy  >= 0.80 (PASS)
-      - context_precision >= 0.75 (PASS)
+    Thresholds are read from a single source of truth (``Settings``) so the
+    endpoint and the CLI quality gate never drift apart.
+
+    Status semantics (mirrors the CLI gate):
+      - PASS     — every metric meets its threshold
+      - FAIL     — at least one metric below its threshold
+      - SKIPPED  — a prerequisite is missing (no OPENAI_API_KEY, or no ingested
+                   data). Returned as HTTP 200 with ``error`` describing the
+                   prerequisite, never a 500.
 
     Note: This endpoint makes LLM API calls proportional to sample count.
     Typical cost: ~0.01 USD per sample with gpt-4o-mini.
@@ -74,54 +80,57 @@ async def evaluate(request: EvalRequest):
                 detail=f"Invalid metrics: {invalid}. Valid: {VALID_METRICS}",
             )
 
+    import sys
+    from pathlib import Path
+
+    # Ensure eval module is importable
+    eval_dir = Path(__file__).parent.parent.parent.parent / "eval"
+    if str(eval_dir.parent) not in sys.path:
+        sys.path.insert(0, str(eval_dir.parent))
+
+    from eval.evaluate import get_ragas_thresholds, run_evaluation
+
+    qa_pairs = [
+        {"question": s.question, "ground_truth": s.ground_truth or ""}
+        for s in request.samples
+    ]
+
     try:
-        import sys
-        from pathlib import Path
-
-        # Ensure eval module is importable
-        eval_dir = Path(__file__).parent.parent.parent.parent / "eval"
-        if str(eval_dir.parent) not in sys.path:
-            sys.path.insert(0, str(eval_dir.parent))
-
-        from eval.evaluate import run_evaluation
-
-        qa_pairs = [
-            {"question": s.question, "ground_truth": s.ground_truth or ""}
-            for s in request.samples
-        ]
-
         results = await _run_in_threadpool(run_evaluation, qa_pairs, request.metrics)
-
-        if "error" in results:
-            return EvalResponse(
-                sample_count=0,
-                metrics={},
-                error=results["error"],
-            )
-
-        THRESHOLDS = {
-            "faithfulness": 0.90,
-            "answer_relevancy": 0.80,
-            "context_precision": 0.75,
-        }
-
-        metric_results = {
-            metric: EvalMetricResult(
-                score=score,
-                passed=results["passed"].get(metric, False),
-                threshold=THRESHOLDS.get(metric, 0.0),
-            )
-            for metric, score in results["metrics"].items()
-        }
-
-        return EvalResponse(
-            sample_count=results["sample_count"],
-            metrics=metric_results,
-        )
-
+    except ValueError as exc:
+        # Missing prerequisite (e.g. OPENAI_API_KEY) — surface as SKIPPED (200),
+        # reading the message from the exception. Do NOT turn it into a 500.
+        logger.warning("Evaluation skipped (prerequisite missing): %s", exc)
+        return EvalResponse(status="SKIPPED", sample_count=0, metrics={}, error=str(exc))
     except Exception as e:
         logger.error(f"Evaluation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
+
+    # Prerequisite not met (no ingested data) → SKIPPED, HTTP 200.
+    if results.get("status") == "SKIPPED":
+        return EvalResponse(
+            status="SKIPPED",
+            sample_count=results.get("sample_count", 0),
+            metrics={},
+            error=results.get("reason"),
+        )
+
+    thresholds = get_ragas_thresholds()
+
+    metric_results = {
+        metric: EvalMetricResult(
+            score=score,
+            passed=results["passed"].get(metric, False),
+            threshold=thresholds.get(metric, 0.0),
+        )
+        for metric, score in results["metrics"].items()
+    }
+
+    return EvalResponse(
+        status=results["status"],
+        sample_count=results["sample_count"],
+        metrics=metric_results,
+    )
 
 
 async def _run_in_threadpool(func, *args):
