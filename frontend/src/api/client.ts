@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-// In production, nginx proxies /api/* to the backend
-// In development, use VITE_API_URL or localhost
-const API_URL = import.meta.env.DEV 
-  ? (import.meta.env.VITE_API_URL || 'http://localhost:8000')
-  : '';  // Empty = same origin, nginx handles proxy
+// Same-origin in both dev and prod: in dev the Vite `/api` proxy forwards to
+// the backend (so requests stay on :5173), and in prod nginx proxies /api/*.
+// A relative base URL keeps the httpOnly `readmind_auth` cookie same-origin so
+// it can be set and sent. An explicit VITE_API_URL still overrides if provided.
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export const apiClient = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

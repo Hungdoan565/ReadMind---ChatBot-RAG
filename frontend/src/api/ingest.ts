@@ -32,6 +32,16 @@ export async function ingestUrl(url: string, roomCode: string): Promise<IngestRe
   return response.data;
 }
 
+export async function ingestNotionPage(pageId: string, roomCode: string): Promise<IngestResponse> {
+  const response = await apiClient.post<IngestResponse>('/api/ingest/notion', { page_id: pageId, room_code: roomCode });
+  return response.data;
+}
+
+export async function ingestNotionDatabase(databaseId: string, roomCode: string): Promise<IngestResponse> {
+  const response = await apiClient.post<IngestResponse>('/api/ingest/notion/db', { database_id: databaseId, room_code: roomCode });
+  return response.data;
+}
+
 export async function deleteDocument(docId: string, roomCode: string): Promise<void> {
   await apiClient.delete(`/api/ingest/${docId}?room_code=${encodeURIComponent(roomCode)}`);
 }
