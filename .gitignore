@@ -44,3 +44,9 @@ frontend/.env
 .pytest_cache/
 htmlcov/
 .coverage
+.hypothesis/
+frontend/test-results/
+frontend/playwright-report/
+openspec/
+.kiro/
+.omo/
