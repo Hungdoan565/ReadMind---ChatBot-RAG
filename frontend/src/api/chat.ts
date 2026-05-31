@@ -20,7 +20,9 @@ export async function sendMessage(
     question,
     room_code: roomCode,
     ...(sessionId && { session_id: sessionId }),
-    ...(activeDocIds && activeDocIds.length > 0 && { active_doc_ids: activeDocIds }),
+    // Pass the selection through as-is when it is an array — including an empty
+    // array, which explicitly means "đừng đọc tài liệu nào" (general AI answer).
+    ...(activeDocIds !== undefined && { active_doc_ids: activeDocIds }),
   };
 
   const response = await apiClient.post<ChatResponse>('/api/chat', payload);
@@ -42,7 +44,9 @@ export async function* streamMessage(
     question,
     room_code: roomCode,
     ...(sessionId && { session_id: sessionId }),
-    ...(activeDocIds && activeDocIds.length > 0 && { active_doc_ids: activeDocIds }),
+    // Pass the selection through as-is when it is an array — including an empty
+    // array, which explicitly means "đừng đọc tài liệu nào" (general AI answer).
+    ...(activeDocIds !== undefined && { active_doc_ids: activeDocIds }),
   };
 
   const response = await fetch(`${API_URL}/api/chat`, {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { FileText, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { DocumentCard } from './DocumentCard';
@@ -27,6 +27,13 @@ export function DocumentList({
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // Track whether we've already done the one-time "select all" for this room,
+  // so bỏ chọn hết (deselect all) does NOT immediately re-select everything.
+  const initialSelectionDoneRef = useRef<string | null>(null);
+  // Latest activeDocIds without forcing fetchDocuments to re-run on every toggle.
+  const activeDocIdsRef = useRef(activeDocIds);
+  activeDocIdsRef.current = activeDocIds;
+
   // Confirm dialog state
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -41,25 +48,36 @@ export function DocumentList({
     try {
       const response = await getDocuments(roomCode);
       setDocuments(response.documents);
-      
-      // Auto-select new documents that aren't already tracked
-      const newDocIds = response.documents
-        .map((d) => d.doc_id)
-        .filter((id) => !activeDocIds.includes(id));
-      
-      if (newDocIds.length > 0 && refreshTrigger > 0) {
-        // Only auto-select if this is a refresh (not initial load)
-        onActiveDocsChange([...activeDocIds, ...newDocIds]);
-      } else if (activeDocIds.length === 0 && response.documents.length > 0) {
-        // On initial load, select all documents
+
+      const current = activeDocIdsRef.current;
+
+      if (refreshTrigger > 0) {
+        // A refresh after an upload: auto-select only the newly added documents,
+        // preserving the user's existing selection (including an empty one).
+        const newDocIds = response.documents
+          .map((d) => d.doc_id)
+          .filter((id) => !current.includes(id));
+        if (newDocIds.length > 0) {
+          onActiveDocsChange([...current, ...newDocIds]);
+        }
+      } else if (
+        initialSelectionDoneRef.current !== roomCode &&
+        current.length === 0 &&
+        response.documents.length > 0
+      ) {
+        // First load for this room only: select all documents once. After this,
+        // the user is free to deselect everything and it stays deselected.
         onActiveDocsChange(response.documents.map((d) => d.doc_id));
       }
+
+      // Mark the one-time initial selection as handled for this room.
+      initialSelectionDoneRef.current = roomCode;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể tải danh sách tài liệu');
     } finally {
       setIsLoading(false);
     }
-  }, [roomCode, refreshTrigger, activeDocIds, onActiveDocsChange]);
+  }, [roomCode, refreshTrigger, onActiveDocsChange]);
 
   useEffect(() => {
     fetchDocuments();

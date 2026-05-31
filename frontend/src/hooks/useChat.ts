@@ -147,7 +147,7 @@ export function useChat(roomCode: string): UseChatReturn {
         content.trim(),
         roomCode,
         sessionId || undefined,
-        activeDocIds.length > 0 ? activeDocIds : undefined,
+        activeDocIds,
         controller.signal
       )) {
         switch (event.event) {

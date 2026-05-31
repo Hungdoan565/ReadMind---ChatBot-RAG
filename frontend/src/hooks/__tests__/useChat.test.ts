@@ -46,7 +46,9 @@ describe('useChat', () => {
       await result.current.sendUserMessage('Hi');
     });
 
-    expect(mockStreamMessage).toHaveBeenCalledWith('Hi', 'ROOM-1234', undefined, undefined, expect.any(AbortSignal));
+    // No documents selected → an explicit empty array is sent (means "đừng đọc
+    // tài liệu nào" → general AI answer), distinct from undefined.
+    expect(mockStreamMessage).toHaveBeenCalledWith('Hi', 'ROOM-1234', undefined, [], expect.any(AbortSignal));
     expect(result.current.sessionId).toBe('session-1');
     expect(result.current.messages).toHaveLength(2);
     expect(result.current.messages[0]).toMatchObject({ role: 'user', content: 'Hi' });
